@@ -192,6 +192,8 @@ async function processFile()
 /* This function retrieves a file from the archive for use later */
 async function fetchFileFromArchive(fileName)
 {
+	let fileData = null;
+
 	if (usingArchive == 'zip')
 	{
 		// The zip handler treats them as objects, but we need to ensure we can find files regardless of case, so we find the match, to find the real file name.
@@ -217,7 +219,23 @@ async function fetchFileFromArchive(fileName)
 			throw new Error('Unable to find ' + fileName);
 
 		// Get our file data from the index we have.
-		fileData = await archiveData[index].readAsString();
+		let UseBlob = false;
+		try {
+			fileData = await archiveData[index].readAsString();
+		}
+		catch (err) {
+			if (err.message.indexOf('Maximum call stack size exceeded') > -1)
+				UseBlob = true;
+			else
+				throw err;
+		}
+
+		// Sometimes we need to use blob because to get around maximum call stack size exceeded
+		if (UseBlob == true && fileData == null)
+		{
+			const fileBlob = await archiveData[index].blob;
+			fileData = await new Response(fileBlob).text();
+		}
 
 		return fileData;
 	}
